@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reflexa - Personal Gemini Journal & Mood Analytics</title>
+  <meta name="description" content="A secure, AI-powered personal journal and mood analytics dashboard powered by Gemini AI and Cloud Firestore.">
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fffbe1',
+              100: '#fef3c7',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+              900: '#78350f',
+            },
+            dark: {
+              bg: '#090d16',
+              card: '#101726',
+              border: '#1e293b',
+              inner: '#161f33',
+              chatBg: '#0b0f1a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #090d16;
+      color: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0b0f1a;
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="bg-[#090d16] text-slate-100 min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800/80 bg-[#0c111d]/90 backdrop-blur-md sticky top-0 z-50 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo & Badge -->
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-amber-500/20">
+          <i data-lucide="sun" class="w-5 h-5 text-slate-950"></i>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xl font-extrabold tracking-tight text-white">Reflexa</span>
+          <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold tracking-wide flex items-center space-x-1">
+            <i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i>
+            <span>Gemini AI</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- User Auth Profile & Header Actions -->
+      <div id="authHeader" class="flex items-center space-x-3">
+        <div id="userProfile" class="hidden flex items-center space-x-3">
+          <button id="btnWeeklySummary" class="px-3 py-1.5 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg border border-amber-500/30 transition flex items-center space-x-1.5 active:scale-95 shadow-xs">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span class="hidden sm:inline">Weekly Synthesis</span>
+            <span class="sm:hidden">Synthesis</span>
+          </button>
+          
+          <img id="userAvatar" class="w-8 h-8 rounded-full border border-amber-500/40 shadow-xs object-cover" src="" alt="User Avatar">
+          <span id="userName" class="text-sm font-semibold text-slate-200 hidden md:inline"></span>
+          <button id="btnSignOut" class="px-3.5 py-1.5 text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700/80 transition flex items-center space-x-1.5 active:scale-95">
+            <i data-lucide="log-out" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span class="hidden sm:inline">Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Canvas -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+
+    <!-- Unauthenticated Landing State -->
+    <section id="landingView" class="py-12 md:py-16 flex flex-col items-center text-center">
+      <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-6">
+        <i data-lucide="brain-circuit" class="w-4 h-4 text-amber-400"></i>
+        <span>AI-Powered Personal Journal & Emotional Intelligence</span>
+      </div>
+
+      <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white max-w-3xl leading-[1.15]">
+        Understand Your Inner World with <span class="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent">Gemini AI</span>
+      </h1>
+
+      <p class="mt-5 text-base sm:text-lg text-slate-400 max-w-2xl leading-relaxed">
+        Reflexa turns your daily thoughts into structured emotional insights. Track your mood evolution, receive empathetic AI reflections, and visualize your growth over time.
+      </p>
+
+      <!-- Auth Action Card -->
+      <div class="mt-10 p-8 bg-[#101726] border border-slate-800 rounded-2xl max-w-md w-full shadow-2xl shadow-black/50">
+        <h2 class="text-xl font-bold text-white mb-1">Welcome to Your Journal</h2>
+        <p class="text-xs text-slate-400 mb-6">Your reflections are isolated securely with Firebase owner-bound rules.</p>
+
+        <button id="btnGoogleSignIn" class="w-full flex items-center justify-center space-x-3 px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl border border-slate-700 shadow-md hover:shadow-lg transition text-sm active:scale-[0.99]">
+          <svg class="w-5 h-5" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.4 7.37 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.6 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+          </svg>
+          <span>Sign in with Google</span>
+        </button>
+
+        <div class="relative my-6">
+          <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-800"></div></div>
+          <div class="relative flex justify-center text-xs text-slate-500 uppercase tracking-wider"><span class="bg-[#101726] px-3 font-medium">or test preview</span></div>
+        </div>
+
+        <button id="btnGuestAccess" class="w-full py-2.5 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-xl border border-amber-500/30 transition active:scale-[0.99]">
+          Continue in Preview / Guest Mode
+        </button>
+      </div>
+
+      <!-- Feature Highlight Cards -->
+      <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full text-left">
+        <div class="bg-[#101726] p-6 rounded-2xl border border-slate-800 shadow-lg">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
+            <i data-lucide="cpu" class="w-5 h-5"></i>
+          </div>
+          <h3 class="font-bold text-white mb-1">Server-Side Gemini AI</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">Structured JSON evaluation with automatic model fallback ladder for high availability.</p>
+        </div>
+
+        <div class="bg-[#101726] p-6 rounded-2xl border border-slate-800 shadow-lg">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
+            <i data-lucide="line-chart" class="w-5 h-5"></i>
+          </div>
+          <h3 class="font-bold text-white mb-1">Mood Analytics Dashboard</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">Interactive Chart.js line graph visualizing your emotional trajectory and primary mood scores.</p>
+        </div>
+
+        <div class="bg-[#101726] p-6 rounded-2xl border border-slate-800 shadow-lg">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+          <h3 class="font-bold text-white mb-1">Isolated Cloud Storage</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">Firebase Cloud Firestore persistence configured with strict owner-bound security rules.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Authenticated Private Dashboard -->
+    <section id="dashboardView" class="hidden space-y-8">
+      
+      <!-- Top Metric Overview Bar (3 KPI Cards including Streak Tracker) -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        
+        <!-- Metric 1: Average Mood Score -->
+        <div class="bg-[#101726] p-6 rounded-2xl border border-slate-800/90 shadow-lg flex items-center justify-between">
+          <div>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Average Mood</span>
+            <div class="flex items-baseline space-x-2 mt-1.5">
+              <span id="metricAvgScore" class="text-3xl font-extrabold text-white">--</span>
+              <span class="text-xs text-slate-500 font-medium">/ 10</span>
+            </div>
+            <span id="metricAvgStatus" class="text-xs font-semibold text-slate-400 mt-1 block">Awaiting entries</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+            <i data-lucide="smile" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Metric 2: Check-in Streak (Module 3) -->
+        <div class="bg-[#101726] p-6 rounded-2xl border border-slate-800/90 shadow-lg flex items-center justify-between">
+          <div>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Check-in Streak</span>
+            <div class="mt-1.5 flex items-center space-x-2">
+              <span id="metricStreak" class="text-3xl font-extrabold text-amber-400">🔥 0</span>
+              <span class="text-xs text-slate-400 font-medium">Days</span>
+            </div>
+            <span id="metricStreakStatus" class="text-xs text-slate-500 mt-1 block">Consecutive reflection days</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+            <i data-lucide="flame" class="w-6 h-6 text-amber-400"></i>
+          </div>
+        </div>
+
+        <!-- Metric 3: Top Emotion -->
+        <div class="bg-[#101726] p-6 rounded-2xl border border-slate-800/90 shadow-lg flex items-center justify-between">
+          <div>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Top Emotion</span>
+            <div class="mt-1.5">
+              <span id="metricTopEmotion" class="text-2xl font-extrabold text-amber-400">--</span>
+            </div>
+            <span id="metricTopEmotionSub" class="text-xs text-slate-500 mt-1 block">Most frequent mood</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+            <i data-lucide="heart-pulse" class="w-6 h-6"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Workspace Grid (Split View Layout) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left Column: Journal Chat Agent Container (7 cols on lg - Primary Focus) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <div class="bg-[#101726] p-6 sm:p-7 rounded-2xl border border-slate-800/90 shadow-xl flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-xs">
+                  <i data-lucide="sun" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <div>
+                  <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                    <span>Journal Chat Agent</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1"></span>
+                      Active
+                    </span>
+                  </h2>
+                  <p class="text-xs text-slate-400">Empathetic multi-turn reflection powered by Gemini AI</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <!-- Export Journal Button (Module 4) -->
+                <button id="btnExportJournal" type="button" class="px-2.5 py-1.5 text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition flex items-center space-x-1 active:scale-95 shadow-xs" title="Export Current Session to Markdown">
+                  <i data-lucide="download" class="w-3.5 h-3.5 text-slate-300"></i>
+                  <span class="hidden sm:inline">Export</span>
+                </button>
+                
+                <button id="btnNewSession" type="button" class="px-3 py-1.5 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30 transition flex items-center space-x-1.5 active:scale-95 shadow-xs">
+                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                  <span>New Session</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Safety Triage Crisis Helpline Banner (Module 3) -->
+            <div id="safetyBanner" class="hidden mb-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs shadow-lg relative">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start space-x-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400 shrink-0 mt-0.5">
+                    <i data-lucide="heart-handshake" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-rose-300 text-sm">Reflexa Supportive Care Notice</h4>
+                    <p class="mt-1 leading-relaxed text-slate-300">
+                      We noticed you may be experiencing intense emotional distress. Remember you are not alone, and there is support available right now.
+                    </p>
+                    <div class="mt-2.5 flex flex-wrap gap-2 text-[11px] font-semibold">
+                      <span class="px-2.5 py-1 bg-rose-500/20 rounded-md text-rose-200 border border-rose-500/40">
+                        📞 Call or Text <strong>988</strong> (Suicide & Crisis Lifeline)
+                      </span>
+                      <span class="px-2.5 py-1 bg-rose-500/20 rounded-md text-rose-200 border border-rose-500/40">
+                        💬 Text <strong>HOME</strong> to <strong>741741</strong> (Crisis Text Line)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button id="btnDismissSafety" type="button" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Scrollable Chat Stream Container -->
+            <div id="chatContainer" class="flex flex-col space-y-4 mb-4 min-h-[380px] max-h-[460px] overflow-y-auto p-4 sm:p-5 rounded-2xl bg-[#0b0f1a] border border-slate-800/80 custom-scrollbar shadow-inner">
+            </div>
+
+            <!-- Starter Prompt Chips -->
+            <div class="flex flex-wrap gap-2 mb-3">
+              <button class="prompt-chip px-3 py-1.5 text-xs font-medium rounded-full bg-[#161f33] hover:bg-amber-500/20 hover:text-amber-300 hover:border-amber-500/40 text-slate-300 border border-slate-700/60 transition cursor-pointer">
+                ✨ What went well today?
+              </button>
+              <button class="prompt-chip px-3 py-1.5 text-xs font-medium rounded-full bg-[#161f33] hover:bg-amber-500/20 hover:text-amber-300 hover:border-amber-500/40 text-slate-300 border border-slate-700/60 transition cursor-pointer">
+                🌿 What stressed me out?
+              </button>
+              <button class="prompt-chip px-3 py-1.5 text-xs font-medium rounded-full bg-[#161f33] hover:bg-amber-500/20 hover:text-amber-300 hover:border-amber-500/40 text-slate-300 border border-slate-700/60 transition cursor-pointer">
+                💡 A personal realization...
+              </button>
+            </div>
+
+            <!-- Dynamic Smart Reply Follow-Up Chips (Module 2) -->
+            <div id="smartRepliesContainer" class="hidden mb-4 p-3 rounded-xl bg-[#0b0f1a] border border-slate-800">
+              <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider block mb-2 flex items-center space-x-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i>
+                <span>Suggested AI Follow-Ups</span>
+              </span>
+              <div id="smartRepliesList" class="flex flex-wrap gap-2">
+              </div>
+            </div>
+
+            <!-- Integrated Dark Bottom Input Bar -->
+            <form id="journalForm" class="space-y-2">
+              <div class="bg-[#161f33] border border-slate-700/70 rounded-2xl p-2 sm:p-2.5 flex items-center gap-2 shadow-xl focus-within:border-amber-500/60 focus-within:ring-1 focus-within:ring-amber-500/30 transition">
+                
+                <!-- Microphone Dictation Button (Module 1) -->
+                <button 
+                  type="button" 
+                  id="btnMic" 
+                  class="p-2.5 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-slate-800/80 transition flex items-center justify-center shrink-0 active:scale-95" 
+                  title="Toggle Voice Dictation"
+                >
+                  <i data-lucide="mic" class="w-4 h-4"></i>
+                </button>
+
+                <!-- Input Textarea -->
+                <textarea 
+                  id="journalInput" 
+                  rows="1" 
+                  required 
+                  placeholder="Share what's on your mind..."
+                  class="flex-1 bg-transparent border-0 text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none py-1.5 px-1 max-h-32 custom-scrollbar"
+                ></textarea>
+
+                <!-- Solid Orange/Gold Send Button -->
+                <button 
+                  type="submit" 
+                  id="btnSubmitJournal"
+                  class="p-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-md shadow-amber-500/20 transition flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                  title="Send Message"
+                >
+                  <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+              </div>
+
+              <div class="flex justify-between items-center text-[11px] text-slate-500 px-1 font-medium">
+                <span>Context-aware multi-turn analysis by Gemini AI</span>
+                <span id="charCount">0 / 10,000</span>
+              </div>
+            </form>
+          </div>
+
+          <!-- Latest AI Result Output Card -->
+          <div id="aiResultCard" class="hidden bg-[#101726] p-6 rounded-2xl border border-amber-500/30 shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <i data-lucide="bot" class="w-4 h-4"></i>
+                <span>Gemini Analysis Evaluation</span>
+              </span>
+              <span id="aiModelBadge" class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-semibold">gemini-3.6-flash</span>
+            </div>
+
+            <div class="mt-4 space-y-4">
+              <!-- Emotion & Score Row -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Primary Emotion</span>
+                  <span id="aiEmotionBadge" class="inline-block mt-1.5 px-3 py-1 text-xs font-bold rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                    --
+                  </span>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Mood Score</span>
+                  <div class="flex items-baseline justify-end space-x-1 mt-1">
+                    <span id="aiMoodScore" class="text-2xl font-extrabold text-white">--</span>
+                    <span class="text-xs text-slate-500 font-medium">/10</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AI Summary Reflection -->
+              <div class="bg-[#0b0f1a] rounded-xl p-4 border border-slate-800">
+                <span class="text-xs text-amber-400 font-semibold block mb-1">Empathetic Reflection Key Takeaway</span>
+                <p id="aiSummaryText" class="text-sm text-slate-300 leading-relaxed italic">
+                  --
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Mood Analytics Dashboard Chart & History List (5 cols on lg - Side Panel) -->
+        <div class="lg:col-span-5 space-y-6">
+          
+          <!-- Chart Card with Heatmap Tab Toggle (Module 4) -->
+          <div class="bg-[#101726] p-6 sm:p-7 rounded-2xl border border-slate-800/90 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-800 gap-2">
+              <div>
+                <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                  <i data-lucide="trending-up" class="w-5 h-5 text-amber-400"></i>
+                  <span>Analytics & Activity</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Emotional trajectory & daily consistency</p>
+              </div>
+              
+              <!-- Tab Switcher (Module 4) -->
+              <div class="flex items-center bg-[#0b0f1a] p-1 rounded-xl border border-slate-800">
+                <button id="tabMoodTrend" type="button" class="px-3 py-1 text-xs font-semibold rounded-lg bg-amber-500/20 text-amber-300 transition">
+                  Trend
+                </button>
+                <button id="tabHeatmap" type="button" class="px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+                  Heatmap
+                </button>
+              </div>
+            </div>
+
+            <!-- View 1: Chart Canvas Container -->
+            <div id="chartView" class="relative w-full h-64">
+              <canvas id="moodChart"></canvas>
+            </div>
+
+            <!-- View 2: Consistency Heatmap Grid (Module 4) -->
+            <div id="heatmapView" class="hidden space-y-3">
+              <div class="flex items-center justify-between text-xs text-slate-400 font-medium">
+                <span>Past 28 Days Activity</span>
+                <span class="text-amber-400 font-semibold" id="heatmapSummaryText">0 Active Days</span>
+              </div>
+              
+              <!-- 28 Day GitHub Style Grid -->
+              <div id="heatmapGrid" class="grid grid-cols-7 gap-2 p-2 bg-[#0b0f1a] rounded-xl border border-slate-800/80">
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] text-slate-500 pt-2">
+                <span>Less</span>
+                <div class="flex items-center space-x-1.5">
+                  <span class="w-3 h-3 rounded-xs bg-slate-800/80 border border-slate-700"></span>
+                  <span class="w-3 h-3 rounded-xs bg-amber-900/60 border border-amber-800"></span>
+                  <span class="w-3 h-3 rounded-xs bg-amber-600/80 border border-amber-500"></span>
+                  <span class="w-3 h-3 rounded-xs bg-amber-400 border border-yellow-300"></span>
+                </div>
+                <span>More / Uplifted</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Past Journal History Card -->
+          <div class="bg-[#101726] p-6 sm:p-7 rounded-2xl border border-slate-800/90 shadow-xl">
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+              <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                <i data-lucide="history" class="w-5 h-5 text-amber-400"></i>
+                <span>Reflection Log</span>
+              </h2>
+              <span id="historyCount" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-semibold">0 sessions</span>
+            </div>
+
+            <!-- History Entries Scroll List -->
+            <div id="historyList" class="space-y-3.5 max-h-[420px] overflow-y-auto pr-1.5 custom-scrollbar">
+              <div class="text-center py-12 text-slate-500 text-sm">
+                <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+                <p>No chat sessions recorded yet. Start a conversation to begin tracking!</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Weekly Synthesis Modal Overlay (Module 2) -->
+  <div id="weeklyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-all">
+    <div class="bg-[#101726] border border-slate-800 rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Weekly Emotional Synthesis</h3>
+            <p class="text-xs text-slate-400">AI-generated multi-day behavioral themes & wellness recommendations</p>
+          </div>
+        </div>
+        <button id="btnCloseWeeklyModal" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Weekly Trend Status Badge -->
+      <div class="flex items-center justify-between bg-[#0b0f1a] p-4 rounded-xl border border-slate-800">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Weekly Emotional Arc</span>
+        <span id="weeklyTrendBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+          Analyzing...
+        </span>
+      </div>
+
+      <!-- Narrative Summary -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider">Overarching Narrative</h4>
+        <p id="weeklySummaryText" class="text-sm text-slate-300 leading-relaxed italic bg-[#161f33] p-4 rounded-xl border border-slate-700/60">
+          Synthesizing past 7 days of journal reflections...
+        </p>
+      </div>
+
+      <!-- Behavioral Themes List -->
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider">Observed Behavioral Themes</h4>
+        <div id="weeklyThemesList" class="space-y-2">
+        </div>
+      </div>
+
+      <!-- Action Items Checklist -->
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider">Recommended Wellness Habits</h4>
+        <div id="weeklyActionItemsList" class="space-y-2">
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-slate-800 flex justify-end">
+        <button id="btnCloseWeeklyModalBtn" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition active:scale-95">
+          Done / Got It
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Banner / Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 max-w-md bg-slate-900 text-white p-4 rounded-xl border border-slate-800 shadow-2xl flex items-start space-x-3">
+    <div id="toastIcon" class="mt-0.5 text-amber-400">
+      <i data-lucide="info" class="w-5 h-5"></i>
+    </div>
+    <div class="flex-1">
+      <h4 id="toastTitle" class="text-xs font-bold text-white uppercase tracking-wider">Notice</h4>
+      <p id="toastMessage" class="text-xs text-slate-300 mt-0.5">Notification message</p>
+    </div>
+  </div>
+
+  <!-- Initialize Lucide Icons -->
+  <script>
+    lucide.createIcons();
+  </script>
+
+  <!-- Main Application Logic Bundle -->
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
