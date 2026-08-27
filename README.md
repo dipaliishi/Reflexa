@@ -8,71 +8,7 @@ Reflexa is a production-grade, containerized full-stack web application built wi
 
 Below is the complete end-to-end flow chart illustrating user interactions, frontend event flows, backend AI execution via the Gemini Fallback Ladder, and Firestore persistence.
 
-```mermaid
-flowchart TD
-    %% User Action & Auth Boundary
-    subgraph Client_Boundary ["Client Interface (Browser & Web Speech API)"]
-        A[User Accesses Reflexa Web App] --> B{Authenticated?}
-        B -- No --> C[Google Sign-In / Guest Preview Mode]
-        B -- Yes --> D[Main Interactive Dashboard]
-        
-        %% Module Inputs
-        D --> E1[Voice Dictation - Web Speech API]
-        D --> E2[Text Entry / Prompt Chips]
-        D --> E3[Smart Reply AI Chips]
-        
-        E1 --> F[Populate Input Bar]
-        E2 --> F
-        E3 --> F
-        
-        F --> G[Submit Journal Entry]
-    end
-
-    %% Full-Stack Server API Proxy
-    subgraph Backend_Boundary ["Server Proxy (Node.js / Express - Port 3000)"]
-        G --> H[POST /api/generate - Body Deserialization & Validation]
-        H --> I[Execute Gemini Fallback Ladder]
-        
-        subgraph Gemini_Ladder ["Gemini AI Fallback Protocol"]
-            I --> J1[Primary: gemini-3.6-flash]
-            J1 -- Success --> K[Structured JSON Evaluation]
-            J1 -- Recoverable Error --> J2[Fallback 1: gemini-3.1-flash-lite]
-            J2 -- Success --> K
-            J2 -- Recoverable Error --> J3[Fallback 2: gemini-flash-latest]
-            J3 -- Success --> K
-            J3 -- Recoverable Error --> J4[Fallback 3: gemini-3.7-flash]
-            J4 --> K
-        end
-        
-        K --> L[Return JSON: replyText, summary, moodScore, primaryEmotion, suggestedFollowUps]
-    end
-
-    %% Client State & Persistence
-    subgraph Persistence_And_UI ["Data Persistence & UI Render Pipeline"]
-        L --> M[Render Dark Chat Stream Bubble]
-        L --> N[Render Smart Reply Follow-up Chips]
-        L --> O{Safety Guardrail Check: Score <= 2 or Distress Keywords?}
-        
-        O -- Yes --> P[Surface 988 Helpline Crisis Banner]
-        O -- No --> Q[Continue Normal State]
-
-        M --> R[Save Session to Firestore: /users/{userId}/sessions/{sessionId}]
-        
-        R --> S1[Update KPI Cards & Check-in Streak 🔥]
-        R --> S2[Update Chart.js Emotional Trend Line]
-        R --> S3[Update 28-Day Consistency Heatmap Grid]
-        R --> S4[Append to Reflection Log]
-    end
-
-    %% Special Feature Subgraphs
-    subgraph Special_Features ["Export & Weekly Synthesis Utilities"]
-        D --> T1[Click Export Journal Button] --> U1[Format Session to Markdown .md Download]
-        D --> T2[Click Weekly Synthesis Button] --> U2[POST /api/weekly-summary] --> U3[Render Weekly Digest Modal]
-    end
-```
-
----
-
+?
 ## 2. Threat Modeling & Security Architecture
 
 Reflexa implements defensive patterns across all 5 Agentic Threat Zones:
