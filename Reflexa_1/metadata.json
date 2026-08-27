@@ -1,0 +1,6 @@
+{
+  "name": "Reflexa",
+  "description": "Personal Gemini Journal & Mood Analytics Dashboard powered by Google GenAI and Firebase",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
