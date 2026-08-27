@@ -20,34 +20,6 @@ Reflexa is an AI-powered personal reflection and journaling application that hel
 - 🛡️ Safety-aware AI responses
 - 🔒 User-isolated Cloud Firestore data
 
-## 🏗️ Architecture
-
-```text
-                    Reflexa
-                       |
-             +---------+---------+
-             |                   |
-        Firebase             Backend API
-        Services                  |
-             |                    |
-       +-----+-----+       +------+------+
-       |           |       |             |
-   Firebase     Firestore /api/generate  |
-     Auth          |      /api/weekly-summary
-                   |             |
-             User UID            |
-             Security            |
-              Rules              |
-                   |             |
-                   +-------------+
-                                 |
-                         Google Cloud
-                        Secret Manager
-                                 |
-                          GEMINI_API_KEY
-                                 |
-                           Gemini API
-
 
 🔐 Security
 
@@ -163,3 +135,34 @@ Build and lint checks pass successfully.
 The production application is deployed and available at:
 
 https://reflexa.ai.studio
+
+## 🏗️ Architecture
+
+```text
+                    Reflexa
+                       |
+             +---------+---------+
+             |                   |
+        Firebase             Backend API
+        Services                  |
+             |                    |
+       +-----+-----+       +------+------+
+       |           |       |             |
+   Firebase     Firestore /api/generate  |
+     Auth          |      /api/weekly-summary
+                   |             |
+             User UID            |
+             Security            |
+              Rules              |
+                   |             |
+                   +-------------+
+                                 |
+                         Google Cloud
+                        Secret Manager
+                                 |
+                          GEMINI_API_KEY
+                                 |
+                           Gemini API
+
+
+
